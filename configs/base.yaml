@@ -1,0 +1,26 @@
+wandb:
+  entity: johnyboro-personal
+  project: MiniPetDetector
+  run_name: lenet5-like-baseline
+  mode: online
+  watch_model: true
+
+model:
+  name: lenet5_like
+  num_classes: 37
+
+data:
+  img_size: [224, 224]
+  batch_size: 32
+  num_workers: 8
+  val_ratio: 0.1
+  test_ratio: 0.1
+
+train:
+  epochs: 10
+  device: auto
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0

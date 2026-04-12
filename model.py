@@ -26,3 +26,9 @@ class LeNet5Like(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
         return self.classifier(x)
+
+
+def build_model(name: str, num_classes: int = 37) -> nn.Module:
+    if name == "lenet5_like":
+        return LeNet5Like(num_classes=num_classes)
+    raise ValueError(f"Unknown model architecture: {name}")

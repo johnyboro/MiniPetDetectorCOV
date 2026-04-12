@@ -1,8 +1,52 @@
+import argparse
+from copy import deepcopy
+
 import torch
 import wandb
+import yaml
 
 from data import get_data_loaders
-from model import LeNet5Like
+from model import build_model
+
+
+def load_yaml(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def flatten_dict(data, prefix=""):
+    flattened = {}
+    for key, value in data.items():
+        full_key = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            flattened.update(flatten_dict(value, full_key))
+        else:
+            flattened[full_key] = value
+    return flattened
+
+
+def set_nested_value(data, dotted_key, value):
+    keys = dotted_key.split(".")
+    current = data
+    for key in keys[:-1]:
+        if key not in current or not isinstance(current[key], dict):
+            current[key] = {}
+        current = current[key]
+    current[keys[-1]] = value
+
+
+def apply_overrides(base_config, overrides):
+    config = deepcopy(base_config)
+    for key, value in overrides.items():
+        if "." in key:
+            set_nested_value(config, key, value)
+        elif (
+            key in config and isinstance(config[key], dict) and isinstance(value, dict)
+        ):
+            config[key].update(value)
+        else:
+            config[key] = value
+    return config
 
 
 def evaluate(model, loader, criterion, device):
@@ -25,32 +69,50 @@ def evaluate(model, loader, criterion, device):
     return total_loss / total, correct / total
 
 
-def train():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader = get_data_loaders()
+def build_optimizer(model, optimizer_config):
+    name = optimizer_config["name"].lower()
+    lr = optimizer_config["lr"]
+    weight_decay = optimizer_config.get("weight_decay", 0.0)
 
-    run = wandb.init(
-        entity="johnyboro-personal",
-        project="MiniPetDetector",
-        name="lenet5-like-baseline",
-        config={
-            "epochs": 10,
-            "lr": 1e-3,
-            "optimizer": "Adam",
-            "architecture": "LeNet5Like",
-            "num_classes": 37,
-            "device": str(device),
-        },
+    if name == "adam":
+        return torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    if name == "sgd":
+        momentum = optimizer_config.get("momentum", 0.9)
+        return torch.optim.SGD(
+            model.parameters(), lr=lr, weight_decay=weight_decay, momentum=momentum
+        )
+    raise ValueError(f"Unknown optimizer: {optimizer_config['name']}")
+
+
+def train_one_run(config, run):
+    requested_device = config["train"].get("device", "auto")
+    if requested_device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(requested_device)
+
+    data_config = config["data"]
+    train_loader, val_loader, test_loader = get_data_loaders(
+        val_ratio=data_config["val_ratio"],
+        test_ratio=data_config["test_ratio"],
+        img_size=tuple(data_config["img_size"]),
+        batch_size=data_config["batch_size"],
+        num_workers=data_config["num_workers"],
     )
-    config = run.config
 
-    model = LeNet5Like(num_classes=config.num_classes).to(device)
+    model = build_model(
+        name=config["model"]["name"],
+        num_classes=config["model"]["num_classes"],
+    ).to(device)
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+    optimizer = build_optimizer(model, config["optimizer"])
 
-    wandb.watch(model, log="all", log_freq=100)
+    if config["wandb"].get("watch_model", False):
+        run.watch(model, log="all", log_freq=100)
 
-    for epoch in range(config.epochs):
+    best_val_acc = 0.0
+    epochs = config["train"]["epochs"]
+    for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         total = 0
@@ -70,25 +132,90 @@ def train():
 
         train_loss = running_loss / total
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+        best_val_acc = max(best_val_acc, val_acc)
 
-        wandb.log(
+        run.log(
             {
                 "epoch": epoch + 1,
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "val_acc": val_acc,
+                "train/loss": train_loss,
+                "val/loss": val_loss,
+                "val/acc": val_acc,
+                "val/best_acc": best_val_acc,
             }
         )
         print(
-            f"Epoch {epoch + 1}/{config.epochs} | "
+            f"Epoch {epoch + 1}/{epochs} | "
             f"train_loss={train_loss:.4f} val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
         )
 
     test_loss, test_acc = evaluate(model, test_loader, criterion, device)
-    wandb.log({"test_loss": test_loss, "test_acc": test_acc})
+    run.log({"test/loss": test_loss, "test/acc": test_acc})
     print(f"Test | loss={test_loss:.4f} acc={test_acc:.4f}")
-    wandb.finish()
+
+
+def run_single(config):
+    with wandb.init(
+        entity=config["wandb"].get("entity"),
+        project=config["wandb"]["project"],
+        name=config["wandb"].get("run_name"),
+        mode=config["wandb"].get("mode", "online"),
+        config=flatten_dict(config),
+    ) as run:
+        effective_config = apply_overrides(config, dict(run.config))
+        train_one_run(effective_config, run)
+
+
+def run_sweep(config, sweep_config, count):
+    project = config["wandb"]["project"]
+    entity = config["wandb"].get("entity")
+    sweep_project = sweep_config.get("project", project)
+    sweep_id = wandb.sweep(sweep=sweep_config, project=sweep_project, entity=entity)
+
+    def sweep_train():
+        with wandb.init(
+            entity=entity,
+            project=sweep_project,
+            mode=config["wandb"].get("mode", "online"),
+        ) as run:
+            effective_config = apply_overrides(config, dict(run.config))
+            train_one_run(effective_config, run)
+
+    wandb.agent(sweep_id, function=sweep_train, count=count)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train MiniPetDetectorCOV models")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/base.yaml",
+        help="Path to training config YAML",
+    )
+    parser.add_argument(
+        "--sweep",
+        type=str,
+        default=None,
+        help="Path to W&B sweep config YAML",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=20,
+        help="Number of sweep runs for this agent",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    config = load_yaml(args.config)
+
+    if args.sweep:
+        sweep_config = load_yaml(args.sweep)
+        run_sweep(config, sweep_config, count=args.count)
+    else:
+        run_single(config)
 
 
 if __name__ == "__main__":
-    train()
+    main()
