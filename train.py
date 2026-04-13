@@ -197,8 +197,10 @@ def run_sweep(config, sweep_config, count):
             entity=entity,
             project=sweep_project,
             mode=config["wandb"].get("mode", "online"),
+            config=flatten_dict(config),
         ) as run:
             effective_config = apply_overrides(config, dict(run.config))
+            run.config.update(flatten_dict(effective_config), allow_val_change=True)
             try:
                 train_one_run(effective_config, run)
             except Exception as exc:
