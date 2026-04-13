@@ -1,4 +1,5 @@
-from linecache import cache
+import random
+
 import torch
 import PIL.Image
 from pathlib import Path
@@ -54,6 +55,9 @@ def get_data_loaders(
     img_size=IMG_SIZE,
     batch_size=BATCH_SIZE,
     num_workers=NUM_WORKERS,
+    subset_fraction=1.0,
+    subset_seed=42,
+    augment_config=None,
 ):
     with open(ANNOTATIONS_FILE, "r") as f:
         data = [
@@ -61,6 +65,11 @@ def get_data_loaders(
             for line in f
             if not line.startswith("#")
         ]
+
+    if subset_fraction < 1.0:
+        subset_size = max(1, int(len(data) * subset_fraction))
+        rng = random.Random(subset_seed)
+        data = rng.sample(data, subset_size)
 
     remaining_data, test_data = train_test_split(
         data, test_size=test_ratio, random_state=42
@@ -91,22 +100,37 @@ def get_data_loaders(
         torch.save({"mean": mean, "std": std}, cache_path)
     print(f"Mean: {mean}, Std: {std}")
 
-    train_transform = transforms.Compose(
-        [
-            transforms.Resize(img_size),
-            transforms.RandAugment(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ]
-    )
+    augment_config = augment_config or {}
+    train_augment = (augment_config.get("train", {}) or {}).copy()
+    train_augment_type = train_augment.get("type", "randaugment")
+    train_ops = [transforms.Resize(img_size)]
 
-    val_transform = transforms.Compose(
-        [
-            transforms.Resize(img_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ]
-    )
+    if augment_config.get("enabled", True):
+        if train_augment_type == "randaugment":
+            randaugment_cfg = train_augment.get("randaugment", {})
+            train_ops.append(
+                transforms.RandAugment(
+                    num_ops=randaugment_cfg.get("num_ops", 2),
+                    magnitude=randaugment_cfg.get("magnitude", 9),
+                )
+            )
+        elif train_augment_type == "basic":
+            hflip_prob = train_augment.get("hflip_prob", 0.5)
+            train_ops.append(transforms.RandomHorizontalFlip(p=hflip_prob))
+        elif train_augment_type == "none":
+            pass
+        else:
+            raise ValueError(f"Unknown train augmentation type: {train_augment_type}")
+
+    train_ops.append(transforms.ToTensor())
+    if augment_config.get("normalize", True):
+        train_ops.append(transforms.Normalize(mean, std))
+    train_transform = transforms.Compose(train_ops)
+
+    val_ops = [transforms.Resize(img_size), transforms.ToTensor()]
+    if augment_config.get("normalize", True):
+        val_ops.append(transforms.Normalize(mean, std))
+    val_transform = transforms.Compose(val_ops)
 
     train_loader = DataLoader(
         PetDataset(train_data, train_transform),

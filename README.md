@@ -39,6 +39,14 @@ EfficientNet-B0 baseline run:
 python train.py --config configs/efficientnet_b0_base.yaml
 ```
 
+Quick debug run with subset and no augmentation:
+
+```bash
+python train.py --config configs/lenet_search_base.yaml
+```
+
+Set `data.subset_fraction` (for example `0.1`) and `augment.train.type` (`none`, `basic`, `randaugment`) in the config.
+
 Launch two sweep agents in background (survives SSH disconnect):
 
 ```bash

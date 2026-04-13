@@ -4,6 +4,16 @@ metric:
   name: val/loss
   goal: minimize
 parameters:
+  augment.train.type:
+    values: ["none", "basic", "randaugment"]
+  augment.train.hflip_prob:
+    values: [0.5]
+  augment.train.randaugment.num_ops:
+    values: [2]
+  augment.train.randaugment.magnitude:
+    values: [5, 7, 9]
+  data.subset_fraction:
+    values: [1.0]
   optimizer.lr:
     distribution: log_uniform_values
     min: 0.0001

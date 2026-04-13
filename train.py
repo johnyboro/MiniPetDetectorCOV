@@ -63,6 +63,9 @@ def train_one_run(config, run):
         img_size=tuple(data_config["img_size"]),
         batch_size=data_config["batch_size"],
         num_workers=data_config["num_workers"],
+        subset_fraction=data_config.get("subset_fraction", 1.0),
+        subset_seed=data_config.get("subset_seed", 42),
+        augment_config=config.get("augment", {}),
     )
 
     model = build_model(

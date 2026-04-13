@@ -16,6 +16,15 @@ data:
   num_workers: 8
   val_ratio: 0.1
   test_ratio: 0.1
+  subset_fraction: 1.0
+  subset_seed: 42
+
+augment:
+  enabled: true
+  normalize: true
+  train:
+    type: basic
+    hflip_prob: 0.5
 
 train:
   epochs: 20
