@@ -120,18 +120,18 @@ def get_data_loaders(
     val_loader = DataLoader(
         PetDataset(val_data, val_transform),
         batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=PREFETCH_FACTOR
+        num_workers=2,
+        # pin_memory=True,
+        # persistent_workers=True,
+        # prefetch_factor=PREFETCH_FACTOR
     )
     test_loader = DataLoader(
         PetDataset(test_data, val_transform),
         batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=PREFETCH_FACTOR
+        # num_workers=num_workers,
+        # pin_memory=True,
+        # persistent_workers=True,
+        # prefetch_factor=PREFETCH_FACTOR
     )
 
     return train_loader, val_loader, test_loader

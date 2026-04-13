@@ -10,7 +10,7 @@ model:
 
 data:
   img_size: [224, 224]
-  batch_size: 32
+  batch_size: 128
   num_workers: 4
   val_ratio: 0.1
   test_ratio: 0.1
