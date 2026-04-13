@@ -6,6 +6,7 @@ from data import get_data_loaders
 from model import build_model
 from config_ops import load_yaml, flatten_dict, apply_overrides
 
+
 def evaluate(model, loader, criterion, device):
     model.eval()
     total_loss = 0.0
@@ -137,7 +138,8 @@ def run_sweep(config, sweep_config, count):
             effective_config = apply_overrides(config, dict(run.config))
             train_one_run(effective_config, run)
 
-    wandb.agent(sweep_id, sweep_train, count)
+    wandb.agent(sweep_id, function=sweep_train, count=count)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MiniPetDetectorCOV models")

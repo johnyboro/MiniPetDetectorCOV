@@ -7,7 +7,8 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 mkdir -p "$LOG_DIR"
 
-CMD=(python "$ROOT_DIR/train.py" "$@")
+source .venv/bin/activate
+CMD=(python3 "$ROOT_DIR/train.py" "$@")
 
 nohup env CUDA_VISIBLE_DEVICES=0 "${CMD[@]}" >"$LOG_DIR/agent_gpu0_${TIMESTAMP}.log" 2>&1 &
 PID0=$!
