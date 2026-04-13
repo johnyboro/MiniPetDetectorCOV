@@ -15,6 +15,14 @@ W&B sweep run:
 python train.py --config configs/base.yaml --sweep configs/sweeps/lenet5_bayes.yaml --count 20
 ```
 
+Launch two sweep agents in background (survives SSH disconnect):
+
+```bash
+./launch_dual_agents.sh --config configs/base.yaml --sweep configs/sweeps/lenet5_bayes.yaml --count 20
+```
+
+Logs are written to `logs/agent_gpu0_<timestamp>.log` and `logs/agent_gpu1_<timestamp>.log`.
+
 To run two sweep agents on two GPUs, start two processes with different visible devices:
 
 ```bash
