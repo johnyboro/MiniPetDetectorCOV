@@ -1,0 +1,29 @@
+wandb:
+  entity: johnyboro-personal
+  project: MiniPetDetector
+  run_name: convnext-tiny-baseline
+  mode: online
+
+model:
+  name: convnext_tiny
+  num_classes: 37
+  params: {}
+
+data:
+  img_size: [224, 224]
+  batch_size: 64
+  num_workers: 8
+  val_ratio: 0.1
+  test_ratio: 0.1
+
+train:
+  epochs: 20
+  device: auto
+  compile: true
+  compile_mode: default
+
+optimizer:
+  name: adam
+  lr: 0.0005
+  weight_decay: 0.0001
+  momentum: 0.9

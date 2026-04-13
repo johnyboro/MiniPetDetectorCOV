@@ -1,0 +1,35 @@
+wandb:
+  entity: johnyboro-personal
+  project: MiniPetDetector
+  run_name: lenet-search-baseline
+  mode: online
+
+model:
+  name: lenet_search_like
+  num_classes: 37
+  params:
+    conv_channels: [16, 32, 64]
+    kernel_size: 5
+    use_batch_norm: false
+    dropout: 0.2
+    fc_hidden_dim: 128
+    activation: relu
+
+data:
+  img_size: [224, 224]
+  batch_size: 128
+  num_workers: 8
+  val_ratio: 0.1
+  test_ratio: 0.1
+
+train:
+  epochs: 40
+  device: auto
+  compile: true
+  compile_mode: default
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0
+  momentum: 0.9

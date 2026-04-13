@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import torch
 import wandb
@@ -67,6 +68,7 @@ def train_one_run(config, run):
     model = build_model(
         name=config["model"]["name"],
         num_classes=config["model"]["num_classes"],
+        params=config["model"].get("params", {}),
     ).to(device)
     if config["train"].get("compile", False):
         model = torch.compile(

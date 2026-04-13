@@ -1,0 +1,35 @@
+method: bayes
+run_cap: 60
+metric:
+  name: val/loss
+  goal: minimize
+parameters:
+  optimizer.name:
+    values: ["adam", "sgd"]
+  optimizer.lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.005
+  optimizer.weight_decay:
+    distribution: log_uniform_values
+    min: 0.000001
+    max: 0.001
+  optimizer.momentum:
+    values: [0.8, 0.9, 0.95]
+  model.params.dropout:
+    values: [0.0, 0.2, 0.4, 0.5]
+  model.params.fc_hidden_dim:
+    values: [84, 128, 256, 512]
+  model.params.use_batch_norm:
+    values: [false, true]
+  model.params.conv_channels:
+    values:
+      - [8, 16]
+      - [16, 32]
+      - [16, 32, 64]
+      - [32, 64, 128]
+  model.params.activation:
+    values: ["relu", "gelu"]
+early_terminate:
+  type: hyperband
+  min_iter: 4

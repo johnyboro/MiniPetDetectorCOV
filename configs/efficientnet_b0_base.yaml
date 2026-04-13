@@ -1,0 +1,30 @@
+wandb:
+  entity: johnyboro-personal
+  project: MiniPetDetector
+  run_name: efficientnet-b0-baseline
+  mode: online
+
+model:
+  name: efficientnet_b0
+  num_classes: 37
+  params:
+    dropout: 0.2
+
+data:
+  img_size: [224, 224]
+  batch_size: 96
+  num_workers: 8
+  val_ratio: 0.1
+  test_ratio: 0.1
+
+train:
+  epochs: 20
+  device: auto
+  compile: true
+  compile_mode: default
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0001
+  momentum: 0.9
