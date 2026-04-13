@@ -10,8 +10,8 @@ DATA_DIR = Path("data")
 IMAGES_DIR = DATA_DIR / "images"
 ANNOTATIONS_FILE = DATA_DIR / "annotations" / "list.txt"
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
-NUM_WORKERS = 4
+BATCH_SIZE = 128
+NUM_WORKERS = 8
 PREFETCH_FACTOR = 4
 CACHE_DIR = DATA_DIR / "cache"
 
@@ -115,23 +115,23 @@ def get_data_loaders(
         num_workers=num_workers,
         pin_memory=True,
         persistent_workers=True,
-        prefetch_factor=PREFETCH_FACTOR
+        prefetch_factor=PREFETCH_FACTOR,
     )
     val_loader = DataLoader(
         PetDataset(val_data, val_transform),
         batch_size=batch_size,
         num_workers=2,
-        # pin_memory=True,
-        # persistent_workers=True,
-        # prefetch_factor=PREFETCH_FACTOR
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=PREFETCH_FACTOR,
     )
     test_loader = DataLoader(
         PetDataset(test_data, val_transform),
         batch_size=batch_size,
-        # num_workers=num_workers,
-        # pin_memory=True,
-        # persistent_workers=True,
-        # prefetch_factor=PREFETCH_FACTOR
+        num_workers=2,
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=PREFETCH_FACTOR,
     )
 
     return train_loader, val_loader, test_loader

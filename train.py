@@ -96,14 +96,7 @@ def train_one_run(config, run):
     if device.type == "cuda":
         torch.backends.cudnn.benchmark = True
 
-    data_config = config["data"]
-    train_loader, val_loader, test_loader = get_data_loaders(
-        val_ratio=data_config["val_ratio"],
-        test_ratio=data_config["test_ratio"],
-        img_size=tuple(data_config["img_size"]),
-        batch_size=data_config["batch_size"],
-        num_workers=data_config["num_workers"],
-    )
+    train_loader, val_loader, test_loader = get_data_loaders()
 
     model = build_model(
         name=config["model"]["name"],
