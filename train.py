@@ -90,6 +90,7 @@ def train_one_run(config, run):
         model.train()
         running_loss = 0.0
         total = 0
+        correct = 0
 
         for images, labels in train_loader:
             images = images.to(device, non_blocking=True)
@@ -103,8 +104,11 @@ def train_one_run(config, run):
 
             running_loss += loss.item() * images.size(0)
             total += images.size(0)
+            predictions = logits.argmax(dim=1)
+            correct += (predictions == labels).sum().item()
 
         train_loss = running_loss / total
+        train_acc = correct / total
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         best_val_acc = max(best_val_acc, val_acc)
 
@@ -112,6 +116,7 @@ def train_one_run(config, run):
             {
                 "epoch": epoch + 1,
                 "train/loss": train_loss,
+                "train/acc": train_acc,
                 "val/loss": val_loss,
                 "val/acc": val_acc,
                 "val/best_acc": best_val_acc,
@@ -119,7 +124,7 @@ def train_one_run(config, run):
         )
         print(
             f"Epoch {epoch + 1}/{epochs} | "
-            f"train_loss={train_loss:.4f} val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
+            f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
         )
 
     test_loss, test_acc = evaluate(model, test_loader, criterion, device)
