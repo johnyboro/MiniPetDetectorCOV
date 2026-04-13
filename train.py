@@ -2,7 +2,6 @@ import argparse
 import torch
 import wandb
 
-from auto_distribute_sweep import spawn_multiple_agents
 from data import get_data_loaders
 from model import build_model
 from config_ops import load_yaml, flatten_dict, apply_overrides
@@ -138,7 +137,7 @@ def run_sweep(config, sweep_config, count):
             effective_config = apply_overrides(config, dict(run.config))
             train_one_run(effective_config, run)
 
-    spawn_multiple_agents(sweep_id, sweep_train, count)
+    wandb.agent(sweep_id, sweep_train, count)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MiniPetDetectorCOV models")

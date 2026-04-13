@@ -3,7 +3,6 @@ import torch
 import PIL.Image
 from pathlib import Path
 from torch.utils.data import DataLoader, Dataset
-from torch.utils.data._utils.pin_memory import pin_memory
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 
