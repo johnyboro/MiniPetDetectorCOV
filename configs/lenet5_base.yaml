@@ -3,7 +3,6 @@ wandb:
   project: MiniPetDetector
   run_name: lenet5-like-baseline
   mode: online
-  watch_model: true
 
 model:
   name: lenet5_like
