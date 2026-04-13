@@ -1,53 +1,11 @@
 import argparse
-from copy import deepcopy
-
 import torch
 import wandb
-import yaml
 
+from auto_distribute_sweep import spawn_multiple_agents
 from data import get_data_loaders
 from model import build_model
-
-
-def load_yaml(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
-def flatten_dict(data, prefix=""):
-    flattened = {}
-    for key, value in data.items():
-        full_key = f"{prefix}.{key}" if prefix else key
-        if isinstance(value, dict):
-            flattened.update(flatten_dict(value, full_key))
-        else:
-            flattened[full_key] = value
-    return flattened
-
-
-def set_nested_value(data, dotted_key, value):
-    keys = dotted_key.split(".")
-    current = data
-    for key in keys[:-1]:
-        if key not in current or not isinstance(current[key], dict):
-            current[key] = {}
-        current = current[key]
-    current[keys[-1]] = value
-
-
-def apply_overrides(base_config, overrides):
-    config = deepcopy(base_config)
-    for key, value in overrides.items():
-        if "." in key:
-            set_nested_value(config, key, value)
-        elif (
-            key in config and isinstance(config[key], dict) and isinstance(value, dict)
-        ):
-            config[key].update(value)
-        else:
-            config[key] = value
-    return config
-
+from config_ops import load_yaml, flatten_dict, apply_overrides
 
 def evaluate(model, loader, criterion, device):
     model.eval()
@@ -180,15 +138,14 @@ def run_sweep(config, sweep_config, count):
             effective_config = apply_overrides(config, dict(run.config))
             train_one_run(effective_config, run)
 
-    wandb.agent(sweep_id, function=sweep_train, count=count)
-
+    spawn_multiple_agents(sweep_id, sweep_train, count)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MiniPetDetectorCOV models")
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/base.yaml",
+        default="configs/lenet5_base.yaml",
         help="Path to training config YAML",
     )
     parser.add_argument(

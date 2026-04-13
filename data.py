@@ -1,3 +1,4 @@
+from linecache import cache
 import torch
 import PIL.Image
 from pathlib import Path
@@ -12,6 +13,7 @@ ANNOTATIONS_FILE = DATA_DIR / "annotations" / "list.txt"
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 NUM_WORKERS = 8
+CACHE_DIR = DATA_DIR / "cache"
 
 
 class PetDataset(Dataset):
@@ -33,7 +35,6 @@ class PetDataset(Dataset):
 
 def get_stats(loader):
     """Computes mean and std of the dataset."""
-    print("Calculating dataset statistics...")
     sum_, res_sq_sum, nb_samples = 0, 0, 0
     for data, _ in loader:
         batch_samples = data.size(0)
@@ -74,10 +75,20 @@ def get_data_loaders(
         [transforms.Resize(img_size), transforms.ToTensor()]
     )
 
-    temp_loader = DataLoader(
-        PetDataset(train_data, base_transform), batch_size=batch_size
-    )
-    mean, std = get_stats(temp_loader)
+    cache_path = CACHE_DIR / f"stats_{img_size[0]}x{img_size[1]}.pt"
+    if cache_path.exists():
+        print("Loading catched dataset statistics...")
+        stats = torch.load(cache_path, map_location="cpu")
+        mean, std = stats["mean"], stats["std"]
+    else:
+        print("Calculating dataset statistics...")
+        temp_loader = DataLoader(
+            PetDataset(train_data, base_transform), batch_size=batch_size
+        )
+        mean, std = get_stats(temp_loader)
+        if not cache_path.parent.exists():
+            cache_path.parent.mkdir(exist_ok=True)
+        torch.save({"mean": mean, "std": std}, cache_path)
     print(f"Mean: {mean}, Std: {std}")
 
     train_transform = transforms.Compose(
