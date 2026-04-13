@@ -6,6 +6,9 @@ from data import get_data_loaders
 from model import build_model
 from config_ops import load_yaml, flatten_dict, apply_overrides
 
+import os
+import multiprocessing
+
 
 def evaluate(model, loader, criterion, device):
     model.eval()
@@ -127,6 +130,7 @@ def run_sweep(config, sweep_config, count):
     project = config["wandb"]["project"]
     entity = config["wandb"].get("entity")
     sweep_project = sweep_config.get("project", project)
+    
     sweep_id = wandb.sweep(sweep=sweep_config, project=sweep_project, entity=entity)
 
     def sweep_train():
@@ -138,7 +142,20 @@ def run_sweep(config, sweep_config, count):
             effective_config = apply_overrides(config, dict(run.config))
             train_one_run(effective_config, run)
 
-    wandb.agent(sweep_id, function=sweep_train, count=count)
+    def start_agent(gpu_id):
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        wandb.agent(sweep_id, function=sweep_train, count=count)
+
+    gpu_ids = [0, 1] 
+    processes = []
+    
+    for gpu_id in gpu_ids:
+        p = multiprocessing.Process(target=start_agent, args=(gpu_id,))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
 
 
 def parse_args():
