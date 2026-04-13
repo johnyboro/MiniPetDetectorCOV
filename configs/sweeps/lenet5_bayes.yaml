@@ -1,4 +1,5 @@
 method: bayes
+run_cap: 40
 metric:
   name: val/loss
   goal: minimize
