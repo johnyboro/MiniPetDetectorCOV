@@ -37,15 +37,21 @@ class PetDataset(Dataset):
 def get_stats(loader):
     """Computes mean and std of the dataset."""
     sum_, res_sq_sum, nb_samples = 0, 0, 0
-    for data, _ in loader:
+    class_counts = torch.zeros(37, dtype=torch.long)
+    for data, targets in loader:
         batch_samples = data.size(0)
         data = data.view(batch_samples, data.size(1), -1)
         sum_ += data.mean(2).sum(0)
         res_sq_sum += (data**2).mean(2).sum(0)
         nb_samples += batch_samples
+        class_counts += torch.bincount(targets, minlength=37)
 
     mean = sum_ / nb_samples
     std = torch.sqrt((res_sq_sum / nb_samples) - mean**2)
+
+    class_percentages = (class_counts.float() / class_counts.sum()) * 100
+    print("class percentages: ", class_percentages)
+
     return mean, std
 
 
