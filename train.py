@@ -166,16 +166,20 @@ def run_sweep(config, sweep_config, count):
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
         wandb.agent(sweep_id, function=sweep_train, count=count)
 
-    gpu_ids = [0, 1]
-    processes = []
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device == "cpu":
+        start_agent(0)
+    else:
+        gpu_ids = [0, 1]
+        processes = []
 
-    for gpu_id in gpu_ids:
-        p = multiprocessing.Process(target=start_agent, args=(gpu_id,))
-        p.start()
-        processes.append(p)
+        for gpu_id in gpu_ids:
+            p = multiprocessing.Process(target=start_agent, args=(gpu_id,))
+            p.start()
+            processes.append(p)
 
-    for p in processes:
-        p.join()
+        for p in processes:
+            p.join()
 
 
 def parse_args():
